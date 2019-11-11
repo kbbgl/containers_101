@@ -24,6 +24,7 @@ After building, we can run `docker-compose up` to start the application.
 
 
 ### Docker Compose v2
+#### Docker Compose is a tool to define and run multi-container Docker applications
 
 Has three layers:
 1) Services
@@ -42,3 +43,31 @@ services:
     mongo:
         image: mongo
 ```
+
+The network layer can help map out which networks the services will be connecting to:
+
+```yaml
+version: '2'
+services:
+    service1:
+        image: ubuntu
+        command: sleep 3600
+        networks:
+            - internal1
+            - default
+    service2:
+        image: ubuntu
+        command: sleep 3600
+        networks:
+            - internal1
+    service3:
+        image: ubuntu
+        command: sleep 3600
+        networks:
+            - default
+networks:
+    internal1:
+        driver: bridge #
+```
+
+So what happens in this case is that a network named `internal1` will be created which will based on the host machine network (`bridge` option) . `service1` will be able to ping a hostname called `service2` and `service3` while `service3` will not be able to reach `service2`.
