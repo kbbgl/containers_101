@@ -67,7 +67,29 @@ services:
             - default
 networks:
     internal1:
-        driver: bridge #
+        driver: bridge 
 ```
 
 So what happens in this case is that a network named `internal1` will be created which will based on the host machine network (`bridge` option) . `service1` will be able to ping a hostname called `service2` and `service3` while `service3` will not be able to reach `service2`.
+
+The volumes layer helps us share volumes between containers:
+
+```yaml
+version: '2'
+services:
+    service1:
+        image: ubuntu
+        command: sleep 3600
+        volumes:
+            - data: /data
+    service2:
+        image: ubuntu
+        command: sleep 3600
+        volumes:
+            - data: /data
+volumes:
+    data:
+        driver: local
+```
+
+So in this set up, if we access `service1` and create a file `test.txt` in `/data`, this file will also appear in `service2`.
