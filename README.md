@@ -92,4 +92,30 @@ volumes:
         driver: local
 ```
 
-So in this set up, if we access `service1` and create a file `test.txt` in `/data`, this file will also appear in `service2`.
+So in this set up, if we access `service1` and create a file `test.txt` in `/data`, this file will also appear in `service2` folder `/data/test.txt`.
+
+
+## Helm
+### A package manager for Kubernetes
+
+**Chart** - Packaged Kubernetes resource.
+
+A chart contains two models:
+* Template
+* Values
+
+**Chart repository** - Dockerhub but for `helm` charts.
+**Release** - Deployed instance of a chart. Even if the source code wasn't modified, the release
+
+#### Helm Components
+
+Client- `helm client`  - Command line templating engine.
+
+Tiller - Lives inside the cluster, manages releases, history and introspection.
+
+
+
+## Kubernetes
+### Orchestration for containers
+
+`ConfigMap` - A container for storing configuration data. Other components (such as Pods) can access the data in the `ConfigMap`.
