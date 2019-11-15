@@ -95,6 +95,21 @@ volumes:
 So in this set up, if we access `service1` and create a file `test.txt` in `/data`, this file will also appear in `service2` folder `/data/test.txt`.
 
 
+## Kubernetes
+### Orchestration for containers
+
+Kubernetes has the following main components:
+* One or more **master nodes**
+* One or more **worker nodes**
+* Distributed key-value store, such as `etcd`
+
+![alt text](https://prod-edxapp.edx-cdn.org/assets/courseware/v1/8f441b27101be805bc286e67adc671a2/asset-v1:LinuxFoundationX+LFS158x+2T2019+type@asset+block/Kubernetes_Architecture1.png "Kubernetes Architecture")
+
+`ConfigMap` - A container for storing configuration data. Other components (such as Pods) can access the data in the `ConfigMap`.
+
+
+
+
 ## Helm
 ### A package manager for Kubernetes
 
@@ -113,9 +128,5 @@ Client- `helm client`  - Command line templating engine.
 
 Tiller - Lives inside the cluster, manages releases, history and introspection.
 
-
-
-## Kubernetes
-### Orchestration for containers
-
-`ConfigMap` - A container for storing configuration data. Other components (such as Pods) can access the data in the `ConfigMap`.
+To create a chart:
+`heml create myChart`
