@@ -101,9 +101,20 @@ So in this set up, if we access `service1` and create a file `test.txt` in `/dat
 Kubernetes has the following main components:
 * One or more **master nodes**
 * One or more **worker nodes**
-* Distributed key-value store, such as `etcd`
+* Distributed key-value store, such as [`etcd`](https://github.com/etcd-io/etcd)
 
 ![alt text](https://prod-edxapp.edx-cdn.org/assets/courseware/v1/8f441b27101be805bc286e67adc671a2/asset-v1:LinuxFoundationX+LFS158x+2T2019+type@asset+block/Kubernetes_Architecture1.png "Kubernetes Architecture")
+
+A **master node** is the brain behind all operations inside the cluster. It includes the Control Plane, which maintains a record of all the Kubernetes objects in the system and runs continuous control loops to manage those objects' state. These loops ensure that the state of the system will match what was configured by the cluster administrator. The cluster's state, all cluster configuration data is saved to `etcd`.
+
+A master node has the following components:
+
+* API server
+* Scheduler
+* Controller managers
+* `etcd`
+
+
 
 `ConfigMap` - A container for storing configuration data. Other components (such as Pods) can access the data in the `ConfigMap`.
 
