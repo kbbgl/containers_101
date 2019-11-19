@@ -141,6 +141,7 @@ A **worker node** has the following components:
 
     An agent that runs on each node and communicates with the Control Plane components on the master node. It receives Pod definitions from the API server and interacts with the container runtime on the node to run containers associated with the Pod. It also monitors the health of the Pod's running containers.
     It connects to the container runtime using the Container Runtime Interface (CRI).
+    
     ![](https://prod-edxapp.edx-cdn.org/assets/courseware/v1/ab209f7c32ceb17ed43dcf6b66056cea/asset-v1:LinuxFoundationX+LFS158x+2T2019+type@asset+block/CRI.png)
 
     `kubelet` connects to the CRI shim to perform container and image operations. The CRI shim implements two services:
