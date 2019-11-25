@@ -107,7 +107,110 @@ Here are a few popular tools to deploy a Kubernetes cluster on cloud environment
 * `kube-aws` - Deploy on AWS
 
 
+### Accessing Cluster
 
+`kubectl` is a command line tool (CLI) to client to manage cluster resources and applications. 
+
+We can also access the web-based UI to interact with the cluster. To retrieve the endpoint, run the command `kubectl config view | grep https | cut -f 2- -d ":" | tr -d " "`.
+
+This is what the Kubernetes HTTP API space looks like:
+
+![](https://prod-edxapp.edx-cdn.org/assets/courseware/v1/7ebcb514203a3af89dc1599625779c1f/asset-v1:LinuxFoundationX+LFS158x+2T2019+type@asset+block/api-server-space_.jpg)
+
+We can run `kubectl proxy` to bind the Kubernetes API server to the loopback address. We can then run `curl http://127.0.0.1:8001` to get a list of APIs:
+
+```bash
+[ec2-user:node1@~]  curl 127.0.0.1:8001/
+# Response
+{
+  "paths": [
+    "/api",
+    "/api/v1",
+    "/apis",
+    "/apis/",
+    ...
+  ]
+  ...
+}
+
+[ec2-user:node1@~]  curl 127.0.0.1:8001/healthz
+# Response
+ok
+```
+
+### Kubernetes Object Model
+
+The object model represents different persistant entities in the Kubernetes cluster. The entities describe:
+
+* What containerized application we're running and on which node.
+* Application resource consumption limits
+* Policies attached to the applications such as restart, fault tolerance, etc.
+
+Examples of popular Kubernetes objects are:
+* `Pod`
+* `ReplicaSet`
+* `Deployment`
+* `Namespace`
+* `Service`
+
+Objects are created using a configuration file in `yaml` format (`json`-format can also be ued but for the most we use `yaml`). An example `Deployment` object for an `nginx` server:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.15.11
+        ports:
+        - containerPort: 80
+```
+
+We set the desired state under the `spec` section which is submitted to the Kubernetes API server. The Kubernetes system manages the `status` section (where it stores the actual state of the object). The Kubernetes Control Plane attempts to match the object's actual state to the desired state.
+
+`apiVersion` field specifies the API endpoint on the API server which we wish to connect to.
+`kind` field specifies the type of object we want to create. It can be of type `Deployment`, `Pod`, etc.
+`metadata` object holds some basic information such as the name and label of the object.
+`spec` object includes the desired state of the object. In this case, we want 3 `Pod` running at any given time (see `replicas` field). The `Pod`s are created using the template set in the `spec.template` field. The `Pod`s creates a single container using the `nginx` image. 
+
+Once the object is created, Kubernetes attaches the `status` field to the object.
+
+### **`Pod`s** 
+Smallest and simplest Kubernetes object. It represents a single instance of an application. A `Pod` contains 1 or more containers which:
+* Are scheduled together on the same host with the `Pod`
+* Share the same network namespace
+* Have access to mount the same external storage (volume)
+
+`Pod`s do not have the capability to self-heal and are ephermal (last for a very short time). They are usually used with controllers (e.g. `Deployment`, `ReplicaSet`, `ReplicationControllers`) which handle `Pod` replication, fault-tolerance, self-healing. 
+
+Here's an example of a `Pod` running one `nginx` container:
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+  labels:
+    app: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.15.11
+    ports:
+    - containerPort: 80
+```
 
 ## Helm
 ### A package manager for Kubernetes
