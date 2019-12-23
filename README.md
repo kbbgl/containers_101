@@ -212,23 +212,80 @@ spec:
     - containerPort: 80
 ```
 
-## Helm
-### A package manager for Kubernetes
+### Labels
 
-**Chart** - Packaged Kubernetes resource.
+Key-value pairs attached to Kubernetes objects (`Pod`s, `ReplicaSets`).
+They are used to organize and select a subset of objects.
 
-A chart contains two models:
-* Template
-* Values
+**Label Selectors** are used by Controllers to select a subset of objects. There are 2 types of Selectors:
 
-**Chart repository** - Dockerhub but for `helm` charts.
-**Release** - Deployed instance of a chart. Even if the source code wasn't modified, the release
+* Equality-based Selectors - use `=`, `==`, `!=` to select objects. For example, `app==mymicroservicename`
+* Set-Based Selectors - use `in`, `notin`, `exists`, `does not exist`. For example, `app in (dev,qa)`.
 
-#### Helm Components
 
-Client- `helm client`  - Command line templating engine.
+### `ReplicationController`
 
-Tiller - Lives inside the cluster, manages releases, history and introspection.
+Ensures that the specified number of replicas of a `Pod` are running at any given time. It is recommended to instantiate `Pod`s using `ReplicationController`s because if a `Pod` without being created using a `ReplicationController`, the `Pod` would not recycle. The default controller is a `Deployment` which configures a `ReplicaSet` to manage the `Pod`'s lifecycle.
 
-To create a chart:
-`helm create myChart`
+### `ReplicaSet`
+
+Next generation `ReplicationController` which supports both equality and set-based Selectors. It is more popular to use `Deployment` to manage `Pod` lifecycle because the `Deployment` by default configures a `ReplicaSet` which manages the `Pod`.
+
+
+### `Deployment`
+
+The `DeploymentController` is part of the `master` node's controller manager and ensures that the current state always matches the desired state. It also allows `rollouts` and `rollbacks` for seamless application updates and downgrades and manages its `ReplicaSet` for application scaling.
+An example of a `rolling update` would be if an application version is updated in the `Deployment` from 1.0 to 1.1 using:
+
+```bash
+kubectl set image deployment myapp myapp=myapp:1.1
+```
+
+The `DeploymentController` will scale down the `ReplicaSet` `Pod`s that use version 1.0 and will create a new `ReplicaSet` with `Pod`s running 1.1 scaled up 3. The fact that the `ReplicaSet` running version 1.0 doesn't get deleted means that there's an option to `rollback` in case version 1.1 has issues.
+
+To check the rollout history, we can use the following command:
+
+```bash
+kubectl rollout history deploy myapp
+
+deployment.extensions/myapp
+REVISION CHANGE-CAUSE
+1        <none>
+```
+
+To get more details about a specific revision:
+
+```bash
+kubectl rollout history deploy myapp --revision=1
+```
+```yaml
+Labels:   app=myapp
+      pod-template-hash=85737cc
+Containers:
+  myapp:
+    Image: myapp:1.0
+...
+```
+
+
+### Namespace
+
+Partitioned virtual sub-clusters.
+
+We can get the namespaces by running:
+
+```bash
+$ kubectl get namespaces
+NAME              STATUS       AGE
+default           Active       11h
+kube-node-lease   Active       11h
+kube-public       Active       11h
+kube-system       Active       11h
+```
+
+Kubernetes creates some default namespaces:
+* `kube-system` - contains objects created by the Kubernetes system, mostly the control plane agents.
+* `kube-public` - unsecured used for exposing public information about the cluster.
+* `kube-node-lease` - used for node heartbeat data.
+* `default` - contains the objects and resources created by administrators and developers. By default, when not setting the `-n $NAMESPACE` flag, commands will use this namespace.
+
