@@ -289,3 +289,85 @@ Kubernetes creates some default namespaces:
 * `kube-node-lease` - used for node heartbeat data.
 * `default` - contains the objects and resources created by administrators and developers. By default, when not setting the `-n $NAMESPACE` flag, commands will use this namespace.
 
+### Authentication
+
+Every API request reaching the API server goes through 3 stages before being accepted:
+
+1) **Authentication** - Logs in a user.
+
+    Kubernetes has two types of users:
+    - Normal users: Managed outside the cluster (e.g. Google accounts)
+    - Service accounts: Managed internally and created by the API server. They are tied to a specific namespace and mount the credentials to communicate with the API server as `Secrets`.
+    * It's also possible to set up anonymous requests and user impersonation.
+
+    Kubernetes uses different authentication modules:
+
+    - Client certificates: By passing `--client-ca-file=/path/to/cert` option to the API server.
+    - Static token: pre-defined bearer tokens with `--token-aut-file=/path/to/token` passed to API server.
+    - 
+
+2) **Authorization** - Authorizes the API requests added by logged-in user.
+
+    Some authorization modules:
+    - **Node Authorizer**: authorizes API requests made by `kubelet`s. It authorizes `kubelet`'s I/O operations for services, endpoints, nodes, etc.
+    - **Webhook Authorizer**: Gives third-party services authorization permission. To enable this type of authorization, the API server needs to be started with `--authorization-webhook-config-file=/path/to/webhook/config`.
+    - **Role-Based Access Control (RBAC) Authorizer**: Authorization based on user roles which restrict them to perform specific operations (`create`, `get`, etc.). There are two types of roles:
+      - `Role`: Grant access to resources within a specific namespace.
+      - `ClusterRole`: Same as `Role` but cluster-wide.
+
+    For example, this creates a `Role` named `pod-reader` for a specific namespace with only some permissible operations:
+    ```yaml
+    kind: Role
+    apiVersion: rbac.authorization.k8s.io/v1
+    metdata:
+      namespace: sisense
+      name: pod-reader
+    rules:
+    - apiGroups: ["] # "" indicates the core API group
+      resources: ["pods"]
+      verbs: ["get", "watch", "list"]
+    ```
+
+    After the `Role` is created, we can associate users to roles using `RoleBinding`.
+
+    There are two types of `RoleBindings`, `RoleBinding` and `ClusterRoleBinding`.
+
+    In this example, we're associating a user with a role:
+    ```yaml
+    kind: RoleBinding
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+      name: pod-read-access
+      namespace: sisense
+    subjects:
+    - kind: User
+      name: sisense_guest
+      apiGroup: rbac.authorization.k8s.io
+    roleRef:
+      kind: Role
+      name: pod-reader
+      apiGroup: rbac.authorization.k8s.io
+    ```
+
+    To enable this type of authorization, we need to run the API server with `--authorziation-mode=RBAC`.
+
+    - **Attribute-Based Access Control (ABAC) Authorizer**: Kubernetes grants access to specific attributes. For example:
+
+
+```json
+{
+  "apiVersion": "abac.authorization.kubernetes.io/v1beta1",
+  "kind": "Policy",
+  "spec": {
+    "user": "sisense_guest",
+    "namespace": "sisense",
+    "resource": "pods",
+    "readonly": true
+  }
+}
+```
+This `Policy` would allow the `sisense_guest` user to only read `Pod`s in the `sisense` namespace.
+
+  To enable this type of authorization, the API server needs to be started with the following argument `--authorization-mode=ABAC`.
+
+3) **Admission Control** - Software modules that can modify or reject the requests. They are used to specify granular access control policies. Examples include `ResourceQuota`, `AlwaysPullImages`, etc. To enable this option, we need to run the API server using `--enable-admission-plugins=NamespaceLifecycle,ResourceQuota,PodSecurityPolicy,DefaultStorageClass`. Kubernetes has some of these enabled by default.
