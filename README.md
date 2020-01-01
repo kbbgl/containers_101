@@ -57,7 +57,7 @@ A **worker node** has the following components:
 
 * `kube-proxy`
 
-    A network agent responsible for dynamic updates and maintenance of all network rules on the node. It abstracts details of Pods networking and forwards connection requests to Pods.
+    A network daemon responsible for dynamic updates and maintenance of all network rules on the node. It abstracts details of `Pod`s networking and forwards connection requests to `Pod`s. It watches the API server on the master node.
     
 * Addons for DNS, Dashboard, cluster-level monitoring and logging
   
@@ -371,3 +371,91 @@ This `Policy` would allow the `sisense_guest` user to only read `Pod`s in the `s
   To enable this type of authorization, the API server needs to be started with the following argument `--authorization-mode=ABAC`.
 
 3) **Admission Control** - Software modules that can modify or reject the requests. They are used to specify granular access control policies. Examples include `ResourceQuota`, `AlwaysPullImages`, etc. To enable this option, we need to run the API server using `--enable-admission-plugins=NamespaceLifecycle,ResourceQuota,PodSecurityPolicy,DefaultStorageClass`. Kubernetes has some of these enabled by default.
+
+
+### `Service`s
+
+Services are used to group `Pod`s to provide common access points from the exterior to thje containerized application. This grouping is achieved using `Label`s and `Selector`s.
+
+![Grouping of Pods using the Service object](https://prod-edxapp.edx-cdn.org/assets/courseware/v1/43deaf159772d06b10039d683640c244/asset-v1:LinuxFoundationX+LFS158x+2T2019+type@asset+block/Services2.png)
+
+`Services` can expose:
+- single `Pod`s, 
+- `ReplicaSet`s, 
+- `Deployment`s, 
+- `DaemonSet`s
+- `StatefulSet`s.
+
+Here's an example of how the `Service` object definition looks like:
+
+```yaml
+kind: Service
+apiVersion: v1
+metadata:
+  name: frontend-svc
+spec:
+  selector:
+    app: frontend
+  ports:
+  - protocol: TCP
+    port: 80 # Service receives requests on this port
+    targetPort: 5000 # Service routes requests to Pods on this port. If undefined, will use port instead.
+```
+
+In this example, we're grouping all `Pod`s with the `app==frontend` `Label` under a `Service` called `frontend-svc`. By default, an IP address (referred to as `ClusterIP`) is assigned to the service and is only routable inside the cluster. A client connects to the `Service` using the `ClusterIP` which forwards traffic to one of the `Pod`s associated with it. A `Service` includes a load balancer by default. The `Pod` IP address and `targetPort` are referred to as the `Service endpoint` (e.g. `10.0.1.4:5000`)
+
+ `kube-proxy` watches the API server on the master node for the addition and removal of `Service`s and endpoints. For each `Service`, on each `node`, `kube-proxy` configures `iptables` rules to capture the traffic for the `ClusterIP` and forwards it to the `Service`'s endpoint. 
+
+ #### `Service` Discovery
+
+ Kubernetes supports two methods of discovering `Services`:
+ 
+ * **Environmental Variables**: As soon as a `Pod` starts on any worker node, `kubelet` running on that node adds a set of environmental variables in the `Pod` for all actibe services. e.g., if we have a service called `gateway`, which exposes port 30999 and its `ClusterIP` is 172.17.0.1, then on any newly-created `Pod`, we will see the environmental variables:
+
+```s
+GATEWAY_SERVICE_HOST=172.17.0.1
+GATEWAY_SERVICE_PORT=30999
+GATEWAY_PORT=tcp://172.17.0.1:30999
+GATEWAY_PORT_6379_TCP=tcp://172.17.0.1:30999
+GATEWAY_PORT_6379_TCP_PROTO=tcp
+GATEWAY_PORT_6379_TCP_PORT=30999
+GATEWAY_PORT_6379_TCP_ADDR=172.17.0.1
+```
+* **DNS**: Kubernetes has a plugin for DNS which creates a DNS record for each Service and its format is `my-svc.my-namespace.svc.cluster.local`. Services within the same namespace find other `Service`s just by their name. 
+
+
+#### `ServiceType`
+
+We can define the access scope of a `Service` using `ServiceType`. The default is `ClusterIP` and is only accessible within the cluster.
+
+* `NodePort`
+
+  In addition to `ClusterIP`, another port (ranging from 30000-32767) is mapped to the `Service` from all worker nodes. 
+
+  So if we map port 30845 to a `Service` and connect to any node on port 30845, the node would route all traffic to the assigned `ClusterIP`. 
+
+  **We use `NodePort` when we want to make `Service`s accessible from the external world**.
+
+* `LoadBalancer`:
+
+  `NodePort` and `ClusterIP` are automatically created and the external load balancer will route to them.
+
+  The `Service` is exposed as a static port on each worker node.
+
+  The `Service` is exposed externally using the underlying cloud provider's load balancer configuration.
+
+* `ExternalIP` 
+  
+  Not managed by Kubernetes.
+
+  A `Service` can be mapped to an `ExternalIP` if it can route to one or more worker nodes. 
+
+  Traffic that is ingressed into the cluster with the `ExternalIP` (as the destination IP) on the `Service` port gets routed to one of the `Service` endpoints. This requires an external cloud provider (Google Cloud Platform, AWS, etc.)
+
+
+* `ExternalName`
+
+  Has no `Selectors` and does not define any endpoints. 
+
+  Used primarily to make externally-configured `Services` available to application inside the cluster.
+
