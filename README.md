@@ -375,7 +375,7 @@ This `Policy` would allow the `sisense_guest` user to only read `Pod`s in the `s
 
 ### `Service`s
 
-Services are used to group `Pod`s to provide common access points from the exterior to thje containerized application. This grouping is achieved using `Label`s and `Selector`s.
+Services are used to group `Pod`s to provide common access points from the exterior to the containerized application. This grouping is achieved using `Label`s and `Selector`s.
 
 ![Grouping of Pods using the Service object](https://prod-edxapp.edx-cdn.org/assets/courseware/v1/43deaf159772d06b10039d683640c244/asset-v1:LinuxFoundationX+LFS158x+2T2019+type@asset+block/Services2.png)
 
@@ -459,3 +459,68 @@ We can define the access scope of a `Service` using `ServiceType`. The default i
 
   Used primarily to make externally-configured `Services` available to application inside the cluster.
 
+
+#### Liveness/Readiness Probes
+
+In certain conditions, applications may become unresponsive or delayed when initializing. For this reason it is standard to implement **Liveness** and **Readiness** Probes that allow the `kubelet` to sample the health of the application running inside a `Pod`s container and force a restart when the application is unresponsive. It standard to check the Readiness Probe a few times to see if the issue is momentary and only the check the Liveness probe.
+
+* Liveness: In cases when the Liveness probe **requests fail, it is usually due to an application deadlock or memory pressure**. If the requests fail enough times (according to configuration), `kubelet` will restart the container.
+Liveness can be defined by:
+
+   * Liveness Command
+   * Liveness HTTP request
+   * TCP Liveness Probe
+
+   For example, see following `Pod` configuration:
+   ```yaml
+   apiVersion: v1
+   kind: Pod
+   metadata:
+     labels:
+       test: liveness
+     name: liveness-exec
+  spec:
+  containers:
+  - name: liveness
+    image: k8s.gcr.io/busybox
+    args:
+    - /bin/sh
+    - -c
+    - touch /tmp/healthy; sleep 30; rm -rf /tmp/healthy; sleep 600
+    livenessProbe:
+      exec:
+        command:
+        - cat
+        - /tmp/healthy
+      initialDelaySeconds: 5
+      periodSeconds: 5
+   ```
+   In this case, the Liveness probe is configured to check the contents of the file `/tmp/healthy` with an initial delay (`initialDelaySecond`) of 5 seconds before the first check. The file will be checked every 5 seconds (`periodSeconds`).
+
+   Another example using an HTTP GET requests:
+
+   ```yaml
+   ...
+   livenessProbe:
+      httpGet:
+         path: /healthz
+         port: 8080
+         httpHeaders:
+         - name: X-Custom-Header
+           value: API_TOKEN
+        initialDelaySeconds: 3
+        periodSeconds: 3
+  ...
+   ```
+
+   Another example using a TCP socket:
+
+   ```yaml
+   ...
+   livenessProbe:
+      tcpSocket:
+         port: 8080
+      initialDelaySeconds: 15
+      periodSeconds: 20
+   ...
+   ```
